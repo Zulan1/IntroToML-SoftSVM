@@ -13,12 +13,23 @@ def softsvm(l, trainX: np.array, trainy: np.array):
     :param trainy: numpy array of size (m, 1) containing the labels of the training sample
     :return: linear predictor w, a numpy array of size (d, 1)
     """
-    raise NotImplementedError()
+    d = int(trainX.shape[1])
+    m = int(trainX.shape[0])
+    diag = spdiag([1] * d + [0] * m)
+    H = 2*l*diag 
+    u = matrix([0.0] * d + [1.0/m] * m)
+    v = matrix([1.0] * m + [0.0] * m)
+    Im = spmatrix(1.0, range(m), range(m))
+    YX = matrix(spdiag(list(trainy))) * matrix(trainX)   
+    Z = spmatrix([], [], [], (m, d))
+    A = sparse([[YX, Z], [Im, Im]])
+    sol = solvers.qp(H, u, -A, -v)
+    return np.vstack(np.array(sol['x']))[:d]
 
 
 def simple_test():
     # load question 2 data
-    data = np.load('EX2q2_mnist.npz')
+    data = np.load('ex2q2_mnist.npz')
     trainX = data['Xtrain']
     testX = data['Xtest']
     trainy = data['Ytrain']
@@ -45,7 +56,6 @@ def simple_test():
 
     # this line should print the classification of the i'th test sample (1 or -1).
     print(f"The {i}'th test sample was classified as {predicty}")
-
 
 if __name__ == '__main__':
     # before submitting, make sure that the function simple_test runs without errors
