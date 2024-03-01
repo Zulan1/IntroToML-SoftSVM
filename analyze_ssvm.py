@@ -31,55 +31,69 @@ def test_input_size(m: int = 200, l: int = 1):
 
     return test_error, train_error
 
-def analyze_lambda_values(sample_size, test_rep, l_values):
+def analyze_lambda_values(sample_size, test_rep, l_values, error_bar):
     """tests the knn algorithm for different k"""
-    averages = []
-    errors = []
-    for l in l_values:
-        test_sample_results, train_sample_results = zip([test_input_size(sample_size, l) for _ in range(test_rep)])
+
+    train_averages, train_errors, test_averages, test_errors = [], [], [], []
+    def calc_error_params(sample_results, averages: list, errors: list):
         low = round(min(sample_results), ROUND_DIGITS)
         high = round(max(sample_results), ROUND_DIGITS)
         average = round(sum(sample_results) / test_rep, ROUND_DIGITS)
         averages.append(average)
-        errors.append((average - low, high - average))  # error below and above the average
+        errors.append((average - low, high - average))
 
-    # Convert errors to a format suitable for error bars (separate positive and negative)
-    errors_below, errors_above = zip(*errors)
-    yerr = [errors_below, errors_above]
-    title = f'Error Range vs. λ Value\n (Sample Size: {sample_size}) (Test Repetitions: {test_rep})'
+    for l in l_values:
+        test_sample_results, train_sample_results = zip(*[test_input_size(sample_size, l) for _ in range(test_rep)])
+        calc_error_params(test_sample_results, test_averages, test_errors)
+        calc_error_params(train_sample_results, train_averages, train_errors)
+
+
+    title = 'Error Range vs. λ Value)'
     x_label = 'λ Value'
-    plot_error_bar_graph(l_values, averages, yerr, title, x_label, errors_below, errors_above, 'log')
-    
-def Q1():
-    """tests the knn algorithm for different sample sizes"""
-    analyze_lambda_values(100, 10, [10**n for n in range(1, 11)])
-    
-def Q2():
-    """tests the knn algorithm for different sample sizes"""
-    analyze_lambda_values(1000, 1, [1, 3, 5, 8])
-    
+    def plot_graph(errors, averages, color, label):
+        # Convert errors to a format suitable for error bars (separate positive and negative)
+        errors_below, errors_above = zip(*errors)
+        yerr = [errors_below, errors_above]
+        if error_bar:
+            plot_error_bar_graph(l_values, averages, yerr, title, x_label, 'log', color=color, label=label)
+        else:
+            plt.plot(l_values, averages, '^', color=color, label=label, markersize=10)
+            # for i, size in enumerate(l_values):
+            #     plt.annotate(round(averages[i], ROUND_DIGITS),
+            #                 (size, averages[i]),
+            #                 textcoords="offset points",
+            #                 xytext=(0, 10),
+            #                 ha='center',
+            #                 fontsize=12)
 
-def plot_error_bar_graph(x_values, averages, yerr, title, x_label, errors_below, errors_above, x_scale='linear'):
+    color = 'blue' if error_bar else 'orange'
+    label = 'Test Sample Size=100' if error_bar else 'Test Sample Size=1000'
+    plot_graph(test_errors, test_averages, color=color, label=label)
+    color = 'green' if error_bar else 'red'
+    label = 'Train Sample Size=100' if error_bar else 'Train Sample Size=1000'
+    plot_graph(train_errors, train_averages, color=color, label=label)
+    plt.legend(loc='upper left')
+
+def plot_error_bar_graph(x_values, averages, yerr, title, x_label, x_scale='linear', color='b', label='error bar'):
     """plots error bar graph with the given parameters"""
-    global end # pylint: disable=w0601
     # Plotting the graph with error bars
-    plt.figure(figsize=(10, 6))
     plt.errorbar(x_values, averages,
-                 yerr=yerr, fmt='o',
-                 color='b', ecolor='gray',
-                 capsize=5, label='Average with Error',
+                 yerr=yerr, fmt='-o',
+                 color=color, ecolor='gray',
+                 capsize=5, label=label,
                  )
 
     # Annotating each data point
-    for i, size in enumerate(x_values):
-        plt.annotate(f'High: {round(errors_above[i] + averages[i], ROUND_DIGITS)}\n'
-                    f'Avg: {round(averages[i], ROUND_DIGITS)}\n'
-                    f'Low: {round(averages[i] - errors_below[i], ROUND_DIGITS)}',
-                    (size, averages[i]),
-                    textcoords="offset points",
-                    xytext=(15, 0),
-                    ha='center',
-                    fontsize=12)
+    # for i, size in enumerate(x_values):
+    #     plt.annotate(round(averages[i], ROUND_DIGITS),
+    #                 # f'High: {round(errors_above[i] + averages[i], ROUND_DIGITS)}\n'
+    #                 # f'Avg: {round(averages[i], ROUND_DIGITS)}\n'
+    #                 # f'Low: {round(averages[i] - errors_below[i], ROUND_DIGITS)}',
+    #                 (size, averages[i]),
+    #                 textcoords="offset points",
+    #                 xytext=(0, 10),
+    #                 ha='center',
+    #                 fontsize=12)
 
     plt.title(title, fontsize=26)
     plt.xlabel(x_label, fontsize=16)
@@ -87,13 +101,11 @@ def plot_error_bar_graph(x_values, averages, yerr, title, x_label, errors_below,
     plt.xscale(x_scale)
     plt.xticks(x_values, fontsize=12)
     plt.grid(True)
-    end = time.time()
-    # plt.savefig(f'.\\Graphs\\{title}.png')
-    plt.show(block=True)
 
 if __name__ == '__main__':
-    # analyze_sample_sizes()
     start = time.time()
-    Q1()
-    # Q2()
+    analyze_lambda_values(100, 10, [10 ** n for n in range(1, 11)], True)
+    analyze_lambda_values(1000, 1, [10 ** n for n in [1, 3, 5, 8]], False)
+    end = time.time()
+    plt.show()
     print(f'time_to_process in seconds {end - start}')
